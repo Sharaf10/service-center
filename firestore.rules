@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Access rules for the Vehicle Service Logbook.
+// Paste this into Firebase console → Firestore Database → Rules, then press Publish.
+//
+// - Only people on the staff list (staff/{email}) can read or change records.
+// - Administrators (role == 'admin') can also change settings and manage staff.
+// - The very first person to open the site can make themselves administrator,
+//   once. After that, only administrators can add people.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function staffPath(e) { return /databases/$(database)/documents/staff/$(e); }
+    function setupPath() { return /databases/$(database)/documents/config/setup; }
+    function isStaff() { return signedIn() && exists(staffPath(myEmail())); }
+    function isAdmin() { return isStaff() && get(staffPath(myEmail())).data.role == 'admin'; }
+
+    // One-time setup marker: created together with the first administrator.
+    match /config/setup {
+      allow read: if signedIn();
+      allow create: if signedIn() && !exists(setupPath()) && existsAfter(staffPath(myEmail()));
+    }
+
+    match /staff/{email} {
+      allow read: if isStaff() || (signedIn() && email == myEmail());
+      // Administrators manage everyone except themselves (so the last admin can't lock themselves out).
+      allow create, update: if isAdmin() && email != myEmail()
+        && request.resource.data.role in ['staff', 'admin'];
+      allow delete: if isAdmin() && email != myEmail();
+      // First-run claim: becomes the first administrator, only before setup exists.
+      allow create: if signedIn() && email == myEmail() && !exists(setupPath())
+        && existsAfter(setupPath()) && request.resource.data.role == 'admin';
+    }
+
+    // Display names for the change log. Everyone writes only their own entry.
+    match /people/{uid} {
+      allow read: if isStaff();
+      allow write: if signedIn() && uid == request.auth.uid;
+    }
+
+    match /vehicles/{id} { allow read, write: if isStaff(); }
+    match /services/{id} { allow read, write: if isStaff(); }
+    match /photos/{id}   { allow read, write: if isStaff(); }
+
+    match /settings/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+  }
+}
