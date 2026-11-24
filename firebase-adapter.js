@@ -1,7 +1,7 @@
 // Connects the logbook page to Firebase (Google sign-in + Cloud Firestore).
 // The page talks to `window.claude.use(name)`; this file provides those
 // services (db, user, assets, downloads) on top of Firebase.
-import { firebaseConfig } from './firebase-config.js';
+import { firebaseConfig } from './firebase-config.js?v=2';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged,
