@@ -251,7 +251,9 @@ function signInScreen(errText) {
         if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-environment') { signInWithRedirect(auth, provider); return; }
         if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
         if (c === 'auth/unauthorized-domain') { signInScreen(`This web address isn’t allowed to sign in yet. In Firebase, open Authentication → Settings → Authorized domains and add ${location.hostname}.`); return; }
-        signInScreen('Sign-in didn’t work. Check your connection and try again.');
+        if (c === 'auth/configuration-not-found' || c === 'auth/operation-not-allowed') { signInScreen('Google sign-in isn’t turned on for this project yet. In Firebase, open Authentication → Sign-in method, enable Google and press Save, then try again.'); return; }
+        if (c === 'auth/network-request-failed') { signInScreen('Sign-in couldn’t reach Google. Check your internet connection and try again.'); return; }
+        signInScreen(`Sign-in didn’t work (${c || 'unknown error'}). Try again, or send this message to whoever set up the logbook.`);
       }
     });
   });
